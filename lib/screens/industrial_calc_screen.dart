@@ -46,7 +46,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     9: 'm/min',
     10: '秒',
     11: 'Hz',
-    12: 'Hz',
+    12: 'rpm',
     13: 'Hz',
   };
   
@@ -155,7 +155,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     10: [], // [11] 処理能力本数と処理能力から処理能力計算
     11: [], // [12] T速度、円周、回転数からインバータ計算
     12: [ // [13] 変則的速度と円周から変則的速度計算
-      {'targetIndex': 13, 'controller': '_calc14IrregularSpeedHzController', 'label': '変則的速度 (Hz)'},
+      {'targetIndex': 13, 'controller': '_calc14IrregularSpeedHzController', 'label': '変則的速度 (rpm)'},
     ],
     13: [], // [14] 変則的速度(Hz)と回転数(1Hz/rpm)からインバータ計算
   };
@@ -219,8 +219,8 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     '[10] ボトル間隔と能力本数から速度計算',
     '[11] 処理能力本数と処理能力から処理能力計算',
     '[12] T速度、円周、回転数からインバータ計算',
-    '[13] 変則的速度と円周から変則的速度(Hz)計算',
-    '[14] 変則的速度(Hz)と回転数(1Hz/rpm)からインバータ計算',
+    '[13] 変則的速度と円周から変則的速度(rpm)計算',
+    '[14] 変則的速度(rpm)と回転数(1Hz/rpm)からインバータ計算',
   ];
 
   void _calculateDistanceM() {
@@ -1072,13 +1072,13 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
           ],
         );
         
-      case 13: // [14] 変則的速度(Hz)と回転数(1Hz/rpm)からインバータ計算
+      case 13: // [14] 変則的速度(rpm)と回転数(1Hz/rpm)からインバータ計算
         return Column(
           children: [
             TextFormField(
               controller: _calc14IrregularSpeedHzController,
               decoration: const InputDecoration(
-                labelText: '変則的速度 (Hz)',
+                labelText: '変則的速度 (rpm)',
                 border: OutlineInputBorder(),
                 helperText: '[13]で求めた値',
               ),
@@ -1145,7 +1145,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       case 12: // [13] 変則的速度と円周から変則的速度計算
         _calculateIrregularSpeedHz();
         break;
-      case 13: // [14] 変則的速度(Hz)と回転数(1Hz/rpm)からインバータ計算
+      case 13: // [14] 変則的速度(rpm)と回転数(1Hz/rpm)からインバータ計算
         _calculateIrregularSpeedInverter();
         break;
     }
@@ -1447,7 +1447,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       '_calc12HzRpmController': '回転数 (1Hz/rpm)',
       '_calc13SpeedController': '変則的速度 (m/min)',
       '_calc13CircumferenceController': '円周 (mm)',
-      '_calc14IrregularSpeedHzController': '変則的速度 (Hz)',
+      '_calc14IrregularSpeedHzController': '変則的速度 (rpm)',
       '_calc14HzRpmController': '回転数 (1Hz/rpm)',
     };
     
