@@ -571,6 +571,12 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
                 _calculationTypes.length,
                 (index) => _buildCalculationCard(index),
               ),
+              
+              // 現在の計算結果サマリー
+              if (_results.isNotEmpty) ...[
+                const SizedBox(height: 32),
+                _buildResultsSummary(),
+              ],
             ],
           ),
         ),
@@ -1267,6 +1273,73 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('「${data.name}」を読み込みました')),
+    );
+  }
+
+  // 現在の計算結果サマリーを構築
+  Widget _buildResultsSummary() {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.indigo.withAlpha(51),
+          width: 1
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '現在の計算結果サマリー',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
+            const Divider(height: 24),
+            
+            // 各計算結果を表示
+            ..._results.entries
+                .where((entry) => entry.value != null)
+                .map((entry) => _buildResultRow(entry.key, entry.value!)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 計算結果の行を構築
+  Widget _buildResultRow(int index, double value) {
+    final String label = _resultLabels[index] ?? '未定義';
+    final String unit = _resultUnits[index] ?? '';
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$label：',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(5)} [$unit]',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo.shade700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 } 
