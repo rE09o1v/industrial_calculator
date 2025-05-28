@@ -446,7 +446,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     for (final target in targetList) {
       final controller = _controllerMap[target['controller']];
       if (controller != null) {
-        controller.text = value.toString();
+        controller.text = value.toStringAsFixed(4);
         copied = true;
       }
     }
@@ -472,7 +472,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     for (final target in targetList) {
       final controller = _controllerMap[target['controller']];
       if (controller != null) {
-        controller.text = value.toString();
+        controller.text = value.toStringAsFixed(4);
       }
     }
   }
@@ -605,12 +605,12 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // 計算項目
               ...List.generate(
-                _calculationTypes.length,
+                    _calculationTypes.length,
                 (index) => _buildCalculationCard(index),
               ),
               
@@ -667,15 +667,15 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => _calculateByIndex(index),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                           backgroundColor: Colors.indigo,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                        child: const Text('計算する', style: TextStyle(fontSize: 16)),
+                  ),
+                  child: const Text('計算する', style: TextStyle(fontSize: 16)),
                       ),
                     ),
                     if (_results.containsKey(index) && _results[index] != null) ...[
@@ -720,10 +720,10 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  _results[index]!.toStringAsFixed(5),
+                                  _results[index]!.toStringAsFixed(4),
                                   style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                                     color: Colors.indigo.shade800,
                                   ),
                                 ),
@@ -1344,7 +1344,31 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
             ),
             const Divider(height: 24),
             
+            // 各入力値を表示
+            if (_controllerMap.values.any((controller) => controller.text.isNotEmpty)) ...[
+              const Text(
+                '入力値',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ..._buildInputValuesSummary(),
+              const Divider(height: 24),
+            ],
+            
             // 各計算結果を表示
+            const Text(
+              '計算結果',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
+            const SizedBox(height: 8),
             ..._results.entries
                 .where((entry) => entry.value != null)
                 .map((entry) => _buildResultRow(entry.key, entry.value!)),
@@ -1352,6 +1376,82 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
         ),
       ),
     );
+  }
+
+  // 入力値のサマリーを構築
+  List<Widget> _buildInputValuesSummary() {
+    final List<Widget> inputWidgets = [];
+    
+    // 各コントローラーの名前とその値を取得
+    for (final entry in _controllerMap.entries) {
+      if (entry.value.text.isEmpty) continue;
+      
+      // コントローラー名から項目名を取得
+      String label = _getInputLabelFromControllerName(entry.key);
+      
+      inputWidgets.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$label：',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Text(
+                entry.value.text,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    return inputWidgets;
+  }
+  
+  // コントローラー名から表示用ラベルを取得
+  String _getInputLabelFromControllerName(String controllerName) {
+    // 例: _calc1DistanceMmController → 距離 (mm)
+    final Map<String, String> controllerLabels = {
+      '_calc1DistanceMmController': '距離 (mm)',
+      '_calc2ArrivalTimeSecController': '到達時間 (秒)',
+      '_calc3DistanceMController': '距離 (m)',
+      '_calc3ArrivalTimeMinController': '到達時間 (分)',
+      '_calc4PcdController': 'ターンテーブル[P.C.D] (mm)',
+      '_calc5RatedRpmController': '各モータ定格回転数 (rpm/min)',
+      '_calc5TSpeedController': 'T速度 (m/rpm/min)',
+      '_calc5CircumferenceController': '円周 (mm)',
+      '_calc6RatedRpmController': '各モータ定格回転数 (rpm/min)',
+      '_calc6ReductionRatioController': '減速比 [1:?]',
+      '_calc7RpmController': '回転数 (rpm/min)',
+      '_calc8CircumferenceController': '円周 (mm)',
+      '_calc8RpmController': '回転数 (rpm/min)',
+      '_calc9BottlesPerMinuteController': '能力本数 (本/分)',
+      '_calc10BottleSpacingController': 'ボトル間隔 (mm)',
+      '_calc10BottlesPerMinuteController': '能力本数 (本/分)',
+      '_calc11NumberOfBottlesController': '処理能力本数 (本)',
+      '_calc11ProcessingTimePerBottleController': '処理能力 (秒)',
+      '_calc12TSpeedController': 'T速度 (m/rpm/min)',
+      '_calc12CircumferenceController': '円周 (mm)',
+      '_calc12HzRpmController': '回転数 (1Hz/rpm)',
+      '_calc13SpeedController': '変則的速度 (m/min)',
+      '_calc13CircumferenceController': '円周 (mm)',
+      '_calc14IrregularSpeedHzController': '変則的速度 (Hz)',
+      '_calc14HzRpmController': '回転数 (1Hz/rpm)',
+    };
+    
+    return controllerLabels[controllerName] ?? controllerName;
   }
 
   // 計算結果の行を構築
@@ -1373,7 +1473,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
             ),
           ),
           Text(
-            '${value.toStringAsFixed(5)} [$unit]',
+            '${value.toStringAsFixed(4)} [$unit]',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

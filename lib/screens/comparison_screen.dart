@@ -74,6 +74,40 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             
             const SizedBox(height: 24),
             
+            // 入力値の比較表示
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Colors.indigo.withAlpha(51),
+                  width: 1
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '入力値の比較',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                    const Divider(height: 24),
+                    
+                    // 横スクロール可能な入力値テーブル
+                    _buildInputValuesComparisonTable(),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
             // 結果の比較表示
             Card(
               elevation: 3,
@@ -286,10 +320,10 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       difference = rightValue! - leftValue!;
       if (difference > 0) {
         differenceColor = Colors.green;
-        differenceText = '+${difference.toStringAsFixed(5)}';
+        differenceText = '+${difference.toStringAsFixed(4)}';
       } else if (difference < 0) {
         differenceColor = Colors.red;
-        differenceText = difference.toStringAsFixed(5);
+        differenceText = difference.toStringAsFixed(4);
       } else {
         differenceColor = Colors.grey;
         differenceText = '±0';
@@ -316,7 +350,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           SizedBox(
             width: 120,
             child: Text(
-              leftValue?.toStringAsFixed(5) ?? '-',
+              leftValue?.toStringAsFixed(4) ?? '-',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
@@ -328,7 +362,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           SizedBox(
             width: 120,
             child: Text(
-              rightValue?.toStringAsFixed(5) ?? '-',
+              rightValue?.toStringAsFixed(4) ?? '-',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
@@ -353,5 +387,163 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
         ],
       ),
     );
+  }
+
+  // 入力値の比較テーブルを構築
+  Widget _buildInputValuesComparisonTable() {
+    // 左右のデータから入力値のキーを取得して統合
+    final Set<String> allInputKeys = {...widget.leftData.inputValues.keys, ...widget.rightData.inputValues.keys};
+    
+    // 入力がない場合
+    if (allInputKeys.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text('保存された入力値はありません'),
+      );
+    }
+    
+    // コントローラー名と表示名のマッピング
+    final Map<String, String> controllerLabels = _getControllerLabels();
+    
+    // 表示用にソート（計算番号順に並べる）
+    final List<String> sortedKeys = allInputKeys.toList()
+      ..sort((a, b) {
+        // _calc1... のような名前から番号を抽出してソート
+        final numA = int.tryParse(a.split('_calc')[1]?.split('Controller')[0]?.split(RegExp(r'[A-Za-z]'))[0] ?? '0') ?? 0;
+        final numB = int.tryParse(b.split('_calc')[1]?.split('Controller')[0]?.split(RegExp(r'[A-Za-z]'))[0] ?? '0') ?? 0;
+        return numA.compareTo(numB);
+      });
+    
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ヘッダー行
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 160,
+                  child: const Text(
+                    '項目',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    widget.leftData.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    widget.rightData.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // 各入力値の行
+          ...sortedKeys.map((key) => _buildInputValueRow(key, controllerLabels[key] ?? key)),
+        ],
+      ),
+    );
+  }
+  
+  // 入力値の各行を構築
+  Widget _buildInputValueRow(String key, String label) {
+    final String? leftValue = widget.leftData.inputValues[key];
+    final String? rightValue = widget.rightData.inputValues[key];
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 項目
+          SizedBox(
+            width: 160,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          
+          // 左側の値
+          SizedBox(
+            width: 120,
+            child: Text(
+              leftValue ?? '-',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          
+          // 右側の値
+          SizedBox(
+            width: 120,
+            child: Text(
+              rightValue ?? '-',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // コントローラー名と表示名のマッピングを取得
+  Map<String, String> _getControllerLabels() {
+    return {
+      '_calc1DistanceMmController': '距離 (mm)',
+      '_calc2ArrivalTimeSecController': '到達時間 (秒)',
+      '_calc3DistanceMController': '距離 (m)',
+      '_calc3ArrivalTimeMinController': '到達時間 (分)',
+      '_calc4PcdController': 'ターンテーブル[P.C.D] (mm)',
+      '_calc5RatedRpmController': '各モータ定格回転数 (rpm/min)',
+      '_calc5TSpeedController': 'T速度 (m/rpm/min)',
+      '_calc5CircumferenceController': '円周 (mm)',
+      '_calc6RatedRpmController': '各モータ定格回転数 (rpm/min)',
+      '_calc6ReductionRatioController': '減速比 [1:?]',
+      '_calc7RpmController': '回転数 (rpm/min)',
+      '_calc8CircumferenceController': '円周 (mm)',
+      '_calc8RpmController': '回転数 (rpm/min)',
+      '_calc9BottlesPerMinuteController': '能力本数 (本/分)',
+      '_calc10BottleSpacingController': 'ボトル間隔 (mm)',
+      '_calc10BottlesPerMinuteController': '能力本数 (本/分)',
+      '_calc11NumberOfBottlesController': '処理能力本数 (本)',
+      '_calc11ProcessingTimePerBottleController': '処理能力 (秒)',
+      '_calc12TSpeedController': 'T速度 (m/rpm/min)',
+      '_calc12CircumferenceController': '円周 (mm)',
+      '_calc12HzRpmController': '回転数 (1Hz/rpm)',
+      '_calc13SpeedController': '変則的速度 (m/min)',
+      '_calc13CircumferenceController': '円周 (mm)',
+      '_calc14IrregularSpeedHzController': '変則的速度 (Hz)',
+      '_calc14HzRpmController': '回転数 (1Hz/rpm)',
+    };
   }
 } 
