@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/industrial_calculations.dart';
+import '../models/calculation_data.dart';
+import '../services/storage_service.dart';
+import 'saved_calculations_screen.dart';
 
 class IndustrialCalcScreen extends StatefulWidget {
   const IndustrialCalcScreen({super.key});
@@ -9,6 +12,8 @@ class IndustrialCalcScreen extends StatefulWidget {
 }
 
 class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
+  final StorageService _storageService = StorageService();
+
   // 各計算の結果を保持するマップ
   final Map<int, double?> _results = {};
   final Map<int, String> _resultLabels = {
@@ -542,6 +547,18 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
         centerTitle: true,
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            tooltip: '現在の計算を保存',
+            onPressed: _showSaveDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.folder_open),
+            tooltip: '保存された計算を開く',
+            onPressed: _openSavedCalculation,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -1097,5 +1114,159 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       return '0より大きい値を入力してください';
     }
     return null;
+  }
+
+  // 保存ダイアログを表示
+  Future<void> _showSaveDialog() async {
+    // 入力されているデータや結果があるか確認
+    bool hasInputs = false;
+    for (final controller in _controllerMap.values) {
+      if (controller.text.isNotEmpty) {
+        hasInputs = true;
+        break;
+      }
+    }
+
+    bool hasResults = _results.isNotEmpty;
+
+    if (!hasInputs && !hasResults) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('保存するデータがありません')),
+      );
+      return;
+    }
+
+    final TextEditingController nameController = TextEditingController();
+    bool? result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('計算を保存'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: '保存名',
+                hintText: '例: モーター計算1',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('保存名を入力してください')),
+                );
+                return;
+              }
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && nameController.text.trim().isNotEmpty) {
+      await _saveCurrentCalculation(nameController.text.trim());
+    }
+
+    nameController.dispose();
+  }
+
+  // 現在の計算を保存
+  Future<void> _saveCurrentCalculation(String name) async {
+    // 入力値を収集
+    Map<String, String> inputValues = {};
+    _controllerMap.forEach((key, controller) {
+      if (controller.text.isNotEmpty) {
+        inputValues[key] = controller.text;
+      }
+    });
+
+    // 結果を収集
+    Map<int, double> results = {};
+    _results.forEach((key, value) {
+      if (value != null) {
+        results[key] = value;
+      }
+    });
+
+    // データを作成
+    final calculationData = CalculationData(
+      name: name,
+      savedAt: DateTime.now(),
+      inputValues: inputValues,
+      results: results,
+    );
+
+    // 保存
+    final success = await _storageService.saveCalculationData(calculationData);
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('計算を保存しました')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('保存に失敗しました')),
+        );
+      }
+    }
+  }
+
+  // 保存された計算を開く
+  Future<void> _openSavedCalculation() async {
+    final CalculationData? selected = await Navigator.push<CalculationData>(
+      context,
+      MaterialPageRoute(builder: (context) => const SavedCalculationsScreen()),
+    );
+
+    if (selected != null) {
+      _loadCalculationData(selected);
+    }
+  }
+
+  // 計算データを読み込む
+  void _loadCalculationData(CalculationData data) {
+    // すべての入力フィールドをクリア
+    _controllerMap.forEach((key, controller) {
+      controller.clear();
+    });
+
+    // すべての結果をクリア
+    setState(() {
+      _results.clear();
+    });
+
+    // 保存された入力値を設定
+    data.inputValues.forEach((key, value) {
+      final controller = _controllerMap[key];
+      if (controller != null) {
+        controller.text = value;
+      }
+    });
+
+    // 保存された結果を設定
+    setState(() {
+      data.results.forEach((key, value) {
+        _results[key] = value;
+      });
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('「${data.name}」を読み込みました')),
+    );
   }
 } 
