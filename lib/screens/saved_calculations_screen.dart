@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/calculation_data.dart';
 import '../services/storage_service.dart';
+import 'comparison_screen.dart';
 
 class SavedCalculationsScreen extends StatefulWidget {
-  const SavedCalculationsScreen({super.key});
+  final bool selectionMode;
+  final CalculationData? firstSelected;
+
+  const SavedCalculationsScreen({
+    super.key, 
+    this.selectionMode = false,
+    this.firstSelected,
+  });
 
   @override
   State<SavedCalculationsScreen> createState() => _SavedCalculationsScreenState();
@@ -67,14 +75,70 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
     }
   }
 
+  void _compareCalculations() async {
+    final firstData = await Navigator.push<CalculationData>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SavedCalculationsScreen(
+          selectionMode: true,
+        ),
+      ),
+    );
+
+    if (firstData == null) return;
+
+    final secondData = await Navigator.push<CalculationData>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SavedCalculationsScreen(
+          selectionMode: true,
+          firstSelected: firstData,
+        ),
+      ),
+    );
+
+    if (secondData == null) return;
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ComparisonScreen(
+          leftData: firstData,
+          rightData: secondData,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    String title;
+    if (widget.selectionMode) {
+      if (widget.firstSelected != null) {
+        title = '比較するデータを選択';
+      } else {
+        title = '基準データを選択';
+      }
+    } else {
+      title = '保存された計算';
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('保存された計算'),
+        title: Text(title),
         centerTitle: true,
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        actions: [
+          if (!widget.selectionMode)
+            IconButton(
+              icon: const Icon(Icons.compare),
+              tooltip: 'データを比較',
+              onPressed: _compareCalculations,
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -86,6 +150,14 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
                   itemCount: _savedCalculations.length,
                   itemBuilder: (context, index) {
                     final calculation = _savedCalculations[index];
+                    
+                    // 比較モードで最初のデータが選択されている場合、そのデータは表示しない
+                    if (widget.selectionMode && 
+                        widget.firstSelected != null && 
+                        widget.firstSelected!.name == calculation.name) {
+                      return const SizedBox.shrink();
+                    }
+                    
                     return Card(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 16.0,
@@ -99,15 +171,17 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
                         subtitle: Text(
                           '保存日時: ${calculation.savedAt.toLocal().toString().substring(0, 16)}',
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteCalculation(calculation),
-                            ),
-                          ],
-                        ),
+                        trailing: widget.selectionMode
+                            ? null
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _deleteCalculation(calculation),
+                                  ),
+                                ],
+                              ),
                         onTap: () {
                           // 計算データを選択して前の画面に戻る
                           Navigator.of(context).pop(calculation);

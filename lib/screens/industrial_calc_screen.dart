@@ -3,6 +3,7 @@ import '../models/industrial_calculations.dart';
 import '../models/calculation_data.dart';
 import '../services/storage_service.dart';
 import 'saved_calculations_screen.dart';
+import 'comparison_screen.dart';
 
 class IndustrialCalcScreen extends StatefulWidget {
   const IndustrialCalcScreen({super.key});
@@ -557,6 +558,47 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
             icon: const Icon(Icons.folder_open),
             tooltip: '保存された計算を開く',
             onPressed: _openSavedCalculation,
+          ),
+          IconButton(
+            icon: const Icon(Icons.compare_arrows),
+            tooltip: '保存されたデータを比較',
+            onPressed: () async {
+              // 保存されたデータから最初のデータを選択
+              final firstData = await Navigator.push<CalculationData>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SavedCalculationsScreen(
+                    selectionMode: true,
+                  ),
+                ),
+              );
+
+              if (firstData == null) return;
+
+              // 2つ目のデータを選択
+              final secondData = await Navigator.push<CalculationData>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SavedCalculationsScreen(
+                    selectionMode: true,
+                    firstSelected: firstData,
+                  ),
+                ),
+              );
+
+              if (secondData == null || !mounted) return;
+
+              // 比較画面に移動
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ComparisonScreen(
+                    leftData: firstData,
+                    rightData: secondData,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
