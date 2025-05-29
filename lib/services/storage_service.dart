@@ -93,4 +93,26 @@ class StorageService {
       return false;
     }
   }
+  
+  // 全ての計算データを削除
+  Future<bool> clearAllCalculations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final names = await getSavedCalculationNames();
+      
+      // 各計算データを削除
+      for (final name in names) {
+        final key = _keyPrefix + name;
+        await prefs.remove(key);
+      }
+      
+      // 保存済み計算リストをクリア
+      await prefs.setStringList(_savedCalcsKey, []);
+      
+      return true;
+    } catch (e) {
+      print('Error clearing all calculations: $e');
+      return false;
+    }
+  }
 } 

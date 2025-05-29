@@ -42,4 +42,6 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+    <!-- Google Sign-in に必要な権限 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>

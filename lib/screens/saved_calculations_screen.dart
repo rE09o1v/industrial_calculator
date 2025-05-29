@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/calculation_data.dart';
 import '../services/storage_service.dart';
+import '../services/google_drive_service.dart';
 import 'comparison_screen.dart';
 
 class SavedCalculationsScreen extends StatefulWidget {
@@ -25,8 +26,10 @@ class SavedCalculationsScreen extends StatefulWidget {
 
 class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
   final StorageService _storageService = StorageService();
+  final GoogleDriveService _googleDriveService = GoogleDriveService();
   List<CalculationData> _savedCalculations = [];
   bool _isLoading = true;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -78,6 +81,86 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
           const SnackBar(content: Text('削除に失敗しました')),
         );
       }
+    }
+  }
+
+  // Google Driveにバックアップする
+  Future<void> _backupToGoogleDrive() async {
+    if (_isProcessing) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final success = await _googleDriveService.backupCalculations();
+      
+      if (!mounted) return;
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Driveにバックアップしました')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('バックアップに失敗しました')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  // Google Driveから復元する
+  Future<void> _restoreFromGoogleDrive() async {
+    if (_isProcessing) return;
+
+    // 確認ダイアログ
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('復元の確認'),
+        content: const Text('Google Driveから最新のバックアップを復元しますか？\n現在のデータはすべて上書きされます。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('復元する'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final success = await _googleDriveService.restoreLatestBackup();
+      
+      if (!mounted) return;
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('バックアップから復元しました')),
+        );
+        _loadSavedCalculations();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('復元に失敗しました')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
 
@@ -144,12 +227,37 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          if (!widget.selectionMode)
+          if (!widget.selectionMode) ...[
+            // バックアップボタン
+            IconButton(
+              icon: _isProcessing 
+                  ? const SizedBox(
+                      width: 20, 
+                      height: 20, 
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      )
+                    )
+                  : const Icon(Icons.backup),
+              tooltip: 'Google Driveにバックアップ',
+              onPressed: _isProcessing ? null : _backupToGoogleDrive,
+            ),
+            
+            // 復元ボタン
+            IconButton(
+              icon: const Icon(Icons.restore),
+              tooltip: 'Google Driveから復元',
+              onPressed: _isProcessing ? null : _restoreFromGoogleDrive,
+            ),
+            
+            // 比較ボタン
             IconButton(
               icon: const Icon(Icons.compare),
               tooltip: 'データを比較',
               onPressed: _compareCalculations,
             ),
+          ],
         ],
       ),
       body: _isLoading

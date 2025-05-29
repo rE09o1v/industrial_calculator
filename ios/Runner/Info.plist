@@ -45,5 +45,18 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Google Sign-in -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- 実際のリバースクライアントIDに置き換えてください -->
+				<string>549512761201-r7pnv4976f65vnokf78mdltd9k2311sa.apps.googleusercontent.com</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
