@@ -6,11 +6,17 @@ import 'comparison_screen.dart';
 class SavedCalculationsScreen extends StatefulWidget {
   final bool selectionMode;
   final CalculationData? firstSelected;
+  final Map<int, List<Map<String, dynamic>>>? resultUsageMap;
+  final Map<int, String>? resultLabels;
+  final Map<int, String>? resultUnits;
 
   const SavedCalculationsScreen({
     super.key, 
     this.selectionMode = false,
     this.firstSelected,
+    this.resultUsageMap,
+    this.resultLabels,
+    this.resultUnits,
   });
 
   @override
@@ -93,6 +99,9 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
         builder: (context) => SavedCalculationsScreen(
           selectionMode: true,
           firstSelected: firstData,
+          resultUsageMap: widget.resultUsageMap,
+          resultLabels: widget.resultLabels,
+          resultUnits: widget.resultUnits,
         ),
       ),
     );
@@ -107,6 +116,9 @@ class _SavedCalculationsScreenState extends State<SavedCalculationsScreen> {
         builder: (context) => ComparisonScreen(
           leftData: firstData,
           rightData: secondData,
+          resultUsageMap: widget.resultUsageMap ?? {},
+          resultLabels: widget.resultLabels ?? {},
+          resultUnits: widget.resultUnits ?? {},
         ),
       ),
     );

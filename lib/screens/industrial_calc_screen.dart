@@ -582,6 +582,9 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
                   builder: (context) => SavedCalculationsScreen(
                     selectionMode: true,
                     firstSelected: firstData,
+                    resultUsageMap: _resultUsageMap,
+                    resultLabels: _resultLabels,
+                    resultUnits: _resultUnits,
                   ),
                 ),
               );
@@ -595,6 +598,9 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
                   builder: (context) => ComparisonScreen(
                     leftData: firstData,
                     rightData: secondData,
+                    resultUsageMap: _resultUsageMap,
+                    resultLabels: _resultLabels,
+                    resultUnits: _resultUnits,
                   ),
                 ),
               );
@@ -1379,16 +1385,41 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
   }
 
   // 入力値のサマリーを構築
-  List<Widget> _buildInputValuesSummary() {
+List<Widget> _buildInputValuesSummary() {
     final List<Widget> inputWidgets = [];
-    
-    // 各コントローラーの名前とその値を取得
+
     for (final entry in _controllerMap.entries) {
       if (entry.value.text.isEmpty) continue;
-      
-      // コントローラー名から項目名を取得
+
+      bool isAutoFilledAndMatchesResult = false;
+
+      // この入力フィールド(entry.key)が、いずれかの計算結果の自動入力先か確認
+      for (var sourceIndex in _resultUsageMap.keys) {
+        // 対応する計算結果が実際に存在するか確認
+        if (_results.containsKey(sourceIndex) &&
+            _results[sourceIndex] != null) {
+          var targets = _resultUsageMap[sourceIndex]!;
+          for (var target in targets) {
+            if (target['controller'] == entry.key) {
+              // 入力フィールドの値と、元となった計算結果の値を比較
+              // _autoSetResultToOtherInputs や _copyResultToInput で使われている toStringAsFixed(4) と合わせる
+              if (entry.value.text ==
+                  _results[sourceIndex]!.toStringAsFixed(4)) {
+                isAutoFilledAndMatchesResult = true;
+                break;
+              }
+            }
+          }
+        }
+        if (isAutoFilledAndMatchesResult) break;
+      }
+
+      // 計算結果から自動設定され、その値が計算結果の値と一致する場合は、入力値サマリーからは除外
+      if (isAutoFilledAndMatchesResult) {
+        continue;
+      }
+
       String label = _getInputLabelFromControllerName(entry.key);
-      
       inputWidgets.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -1416,7 +1447,6 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
         ),
       );
     }
-    
     return inputWidgets;
   }
   

@@ -5,11 +5,17 @@ import '../services/storage_service.dart';
 class ComparisonScreen extends StatefulWidget {
   final CalculationData leftData;
   final CalculationData rightData;
+  final Map<int, List<Map<String, dynamic>>> resultUsageMap; // 追加
+  final Map<int, String> resultLabels; // 追加
+  final Map<int, String> resultUnits; // 追加
 
   const ComparisonScreen({
     super.key,
     required this.leftData,
     required this.rightData,
+    required this.resultUsageMap, // 追加
+    required this.resultLabels, // 追加
+    required this.resultUnits, // 追加
   });
 
   @override
@@ -311,25 +317,6 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     
     final bool bothHaveValues = leftValue != null && rightValue != null;
     
-    // 差分計算
-    double? difference;
-    Color differenceColor = Colors.black;
-    String differenceText = '';
-    
-    if (bothHaveValues) {
-      difference = rightValue! - leftValue!;
-      if (difference > 0) {
-        differenceColor = Colors.green;
-        differenceText = '+${difference.toStringAsFixed(4)}';
-      } else if (difference < 0) {
-        differenceColor = Colors.red;
-        differenceText = difference.toStringAsFixed(4);
-      } else {
-        differenceColor = Colors.grey;
-        differenceText = '±0';
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -358,7 +345,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             ),
           ),
           
-          // 右側の値と差分
+          // 右側の値
           SizedBox(
             width: 120,
             child: Text(
@@ -372,17 +359,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           
           // 差分
           if (bothHaveValues) ...[
-            SizedBox(
-              width: 100,
-              child: Text(
-                '($differenceText)',
-                style: TextStyle(
-                  color: differenceColor,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.end,
-              ),
-            ),
+            _buildDifferenceText(leftValue!.toString(), rightValue!.toString()),
           ],
         ],
       ),
@@ -391,47 +368,198 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
   // 入力値の比較テーブルを構築
   Widget _buildInputValuesComparisonTable() {
-    // 左右のデータから入力値のキーを取得して統合
-    final Set<String> allInputKeys = {...widget.leftData.inputValues.keys, ...widget.rightData.inputValues.keys};
-    
-    // 入力がない場合
+    final Set<String> allInputKeys = {
+      ...widget.leftData.inputValues.keys,
+      ...widget.rightData.inputValues.keys,
+    };
+
     if (allInputKeys.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(8.0),
         child: Text('保存された入力値はありません'),
       );
     }
-    
-    // コントローラー名と表示名のマッピング
+
+    // 関連するコントローラーペアを定義（同じ値を共有するコントローラー）
+    final Map<String, String> relatedControllers = {
+      '_calc5RatedRpmController': '_calc6RatedRpmController',
+      '_calc7BottlesPerMinuteController': '_calc8NumberOfBottlesController',
+      '_calc9BottlesPerMinuteController': '_calc10BottlesPerMinuteController',
+    };
+
     final Map<String, String> controllerLabels = _getControllerLabels();
-    
-    // 表示用にソート（計算番号順に並べる）
-    final List<String> sortedKeys = allInputKeys.toList()
-      ..sort((a, b) {
-        // _calc1... のような名前から番号を抽出してソート
-        final numA = int.tryParse(a.split('_calc')[1]?.split('Controller')[0]?.split(RegExp(r'[A-Za-z]'))[0] ?? '0') ?? 0;
-        final numB = int.tryParse(b.split('_calc')[1]?.split('Controller')[0]?.split(RegExp(r'[A-Za-z]'))[0] ?? '0') ?? 0;
-        return numA.compareTo(numB);
-      });
-    
+    final List<Widget> displayRows = [];
+    // 既に表示された関連コントローラーを記録
+    final Set<String> processedRelatedControllers = {};
+
+    final List<String> sortedKeys =
+        allInputKeys.toList()..sort((a, b) {
+          // (ソートロジックは既存のまま)
+          final numA =
+              int.tryParse(
+                a
+                        .split('_calc')[1]
+                        ?.split('Controller')[0]
+                        ?.split(RegExp(r'[A-Za-z]'))[0] ??
+                    '0',
+              ) ??
+              0;
+          final numB =
+              int.tryParse(
+                b
+                        .split('_calc')[1]
+                        ?.split('Controller')[0]
+                        ?.split(RegExp(r'[A-Za-z]'))[0] ??
+                    '0',
+              ) ??
+              0;
+          return numA.compareTo(numB);
+        });
+
+    for (final inputKey in sortedKeys) {
+      // 既に処理された関連コントローラーはスキップ
+      if (processedRelatedControllers.contains(inputKey)) {
+        continue;
+      }
+
+      final String? leftValueText = widget.leftData.inputValues[inputKey];
+      final String? rightValueText = widget.rightData.inputValues[inputKey];
+
+      bool leftIsFromResult = false;
+      if (leftValueText != null) {
+        for (var sourceIndex in widget.resultUsageMap.keys) {
+          if (widget.leftData.results.containsKey(sourceIndex) &&
+              widget.leftData.results[sourceIndex] != null) {
+            var targets = widget.resultUsageMap[sourceIndex]!;
+            for (var target in targets) {
+              if (target['controller'] == inputKey) {
+                if (leftValueText ==
+                    widget.leftData.results[sourceIndex]!.toStringAsFixed(4)) {
+                  leftIsFromResult = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (leftIsFromResult) break;
+        }
+      }
+
+      bool rightIsFromResult = false;
+      if (rightValueText != null) {
+        for (var sourceIndex in widget.resultUsageMap.keys) {
+          if (widget.rightData.results.containsKey(sourceIndex) &&
+              widget.rightData.results[sourceIndex] != null) {
+            var targets = widget.resultUsageMap[sourceIndex]!;
+            for (var target in targets) {
+              if (target['controller'] == inputKey) {
+                if (rightValueText ==
+                    widget.rightData.results[sourceIndex]!.toStringAsFixed(4)) {
+                  rightIsFromResult = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (rightIsFromResult) break;
+        }
+      }
+
+      // 左右両方の値が存在し、かつ両方ともそれぞれの計算結果と一致する場合は、この行を表示しない
+      if ((leftValueText != null && leftIsFromResult) &&
+          (rightValueText != null && rightIsFromResult)) {
+        continue; // この行をスキップ
+      }
+      // 左側の値のみが存在し、かつそれが計算結果と一致する場合もスキップ
+      if (leftValueText != null && leftIsFromResult && rightValueText == null) {
+        continue; // この行をスキップ
+      }
+      // 右側の値のみが存在し、かつそれが計算結果と一致する場合もスキップ
+      if (rightValueText != null &&
+          rightIsFromResult &&
+          leftValueText == null) {
+        continue; // この行をスキップ
+      }
+
+      // 関連するコントローラーを確認し、関連コントローラーとして処理済みにマーク
+      final String? relatedController = relatedControllers[inputKey];
+      if (relatedController != null) {
+        processedRelatedControllers.add(relatedController);
+      }
+
+      displayRows.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 160,
+                child: Text(
+                  controllerLabels[inputKey] ?? inputKey,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+              SizedBox(
+                width: 120,
+                child: Text(
+                  leftValueText ?? '-',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        (leftValueText != null && leftIsFromResult)
+                            ? Colors.grey
+                            : Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(
+                width: 120,
+                child: Text(
+                  rightValueText ?? '-',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        (rightValueText != null && rightIsFromResult)
+                            ? Colors.grey
+                            : Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              // 差分表示を追加
+              if (leftValueText != null && rightValueText != null) ...[
+                _buildDifferenceText(leftValueText, rightValueText),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (displayRows.isEmpty && allInputKeys.isNotEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text('表示する独立した入力値はありません。\n(すべて計算結果から自動設定された値です)'),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ヘッダー行
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Row(
+              // (ヘッダー行の定義は既存のまま)
               children: [
                 SizedBox(
                   width: 160,
                   child: const Text(
                     '項目',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 SizedBox(
@@ -459,9 +587,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
               ],
             ),
           ),
-          
-          // 各入力値の行
-          ...sortedKeys.map((key) => _buildInputValueRow(key, controllerLabels[key] ?? key)),
+          ...displayRows, // フィルタリングされた行のみ表示
         ],
       ),
     );
@@ -545,5 +671,53 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       '_calc14IrregularSpeedHzController': '変則的速度 (Hz)',
       '_calc14HzRpmController': '回転数 (1Hz/rpm)',
     };
+  }
+
+  // 差分表示を構築
+  Widget _buildDifferenceText(String leftValue, String rightValue) {
+    try {
+      final double left = double.tryParse(leftValue) ?? 0;
+      final double right = double.tryParse(rightValue) ?? 0;
+      final double difference = right - left;
+      Color differenceColor;
+      String differenceText;
+      
+      if (difference > 0) {
+        differenceColor = Colors.green;
+        differenceText = '+${difference.toStringAsFixed(4)}';
+      } else if (difference < 0) {
+        differenceColor = Colors.red;
+        differenceText = difference.toStringAsFixed(4);
+      } else {
+        differenceColor = Colors.grey;
+        differenceText = '±0';
+      }
+
+      return SizedBox(
+        width: 100,
+        child: Text(
+          '($differenceText)',
+          style: TextStyle(
+            color: differenceColor,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.end,
+        ),
+      );
+    } catch (e) {
+      // 数値変換エラーの場合
+      return const SizedBox(
+        width: 100,
+        child: Text(
+          '(比較不可)',
+          style: TextStyle(
+            color: Colors.grey,
+            fontStyle: FontStyle.italic,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.end,
+        ),
+      );
+    }
   }
 } 
