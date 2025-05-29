@@ -1375,19 +1375,90 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            ..._results.entries
-                .where((entry) => entry.value != null)
-                .map((entry) => _buildResultRow(entry.key, entry.value!)),
+            ..._buildUniqueResultRows(),
           ],
         ),
       ),
     );
   }
 
-  // 入力値のサマリーを構築
-List<Widget> _buildInputValuesSummary() {
-    final List<Widget> inputWidgets = [];
+  // 重複のない計算結果行を構築
+  List<Widget> _buildUniqueResultRows() {
+    // 「ラベル + 単位」をキーとして、結果値を保持するマップ
+    final Map<String, Map<String, dynamic>> uniqueResults = {};
+    
+    for (final entry in _results.entries.where((e) => e.value != null)) {
+      final String label = _resultLabels[entry.key] ?? '未定義';
+      final String unit = _resultUnits[entry.key] ?? '';
+      
+      // 「ラベル + 単位」をキーとして使用することで、
+      // 同じラベルでも異なる単位のものは別々に表示
+      String uniqueKey = "$label ($unit)";
+      
+      // 同じラベル+単位の結果が既に存在する場合は、新しい値で上書き
+      uniqueResults[uniqueKey] = {
+        'value': entry.value,
+        'unit': unit,
+        'index': entry.key, // インデックスも保存して順序付けに使用可能
+      };
+    }
+    
+    // 結果をインデックス順にソート
+    var sortedEntries = uniqueResults.entries.toList()
+      ..sort((a, b) {
+        int indexA = a.value['index'] as int;
+        int indexB = b.value['index'] as int;
+        return indexA.compareTo(indexB);
+      });
+    
+    // ソートされたリストからウィジェットを生成
+    return sortedEntries.map((entry) {
+      final String fullKey = entry.key;
+      final double value = entry.value['value'] as double;
+      final String unit = entry.value['unit'] as String;
+      
+      // キーからラベル部分を抽出
+      String label = fullKey.split(' (')[0];
+      
+      return _buildResultRow(label, value, unit);
+    }).toList();
+  }
 
+  // 計算結果の行を構築
+  Widget _buildResultRow(String label, double value, String unit) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$label：',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(4)} [$unit]',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 入力値のサマリーを構築
+  List<Widget> _buildInputValuesSummary() {
+    final List<Widget> inputWidgets = [];
+    // 「ラベル」のみをキーとしたマップを作成し、完全に同じラベルの値の重複を防ぐ
+    final Map<String, String> uniqueInputs = {};
+
+    // まず全ての入力値を収集
     for (final entry in _controllerMap.entries) {
       if (entry.value.text.isEmpty) continue;
 
@@ -1419,7 +1490,16 @@ List<Widget> _buildInputValuesSummary() {
         continue;
       }
 
-      String label = _getInputLabelFromControllerName(entry.key);
+      // コントローラー名から完全なラベル（名前と単位を含む）を取得
+      String fullLabel = _getInputLabelFromControllerName(entry.key);
+      
+      // ラベルのみをキーとして使用し、同じラベルの場合は上書き
+      // これにより「各モータ定格回転数 (rpm/min)」などの重複が解消される
+      uniqueInputs[fullLabel] = entry.value.text;
+    }
+    
+    // 重複なしのマップからウィジェットを生成
+    uniqueInputs.forEach((label, value) {
       inputWidgets.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -1435,7 +1515,7 @@ List<Widget> _buildInputValuesSummary() {
                 ),
               ),
               Text(
-                entry.value.text,
+                value,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1446,7 +1526,8 @@ List<Widget> _buildInputValuesSummary() {
           ),
         ),
       );
-    }
+    });
+    
     return inputWidgets;
   }
   
@@ -1482,36 +1563,5 @@ List<Widget> _buildInputValuesSummary() {
     };
     
     return controllerLabels[controllerName] ?? controllerName;
-  }
-
-  // 計算結果の行を構築
-  Widget _buildResultRow(int index, double value) {
-    final String label = _resultLabels[index] ?? '未定義';
-    final String unit = _resultUnits[index] ?? '';
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '$label：',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Text(
-            '${value.toStringAsFixed(4)} [$unit]',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo.shade700,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 } 
