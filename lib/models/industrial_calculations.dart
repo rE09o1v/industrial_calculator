@@ -45,9 +45,9 @@ class IndustrialCalculations {
     return rpm / 50;
   }
 
-  // [8] 円周と回転数から回転数(m/min)を計算
+  // [8] 円周と回転数から速度(m/min)を計算
   static double calculateRpmToMeterPerMin({required double circumference, required double rpm}) {
-    // 回転数(m/min) = 円周(mm) * 回転数(rpm/min) / 1000
+    // 速度(m/min) = 円周(mm) * 回転数(rpm/min) / 1000
     return circumference * rpm / 1000;
   }
 

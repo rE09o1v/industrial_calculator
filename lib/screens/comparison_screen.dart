@@ -31,7 +31,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     4: '計算上の減速比',
     5: '回転数',
     6: '回転数',
-    7: '回転数',
+    7: '速度',
     8: '処理能力',
     9: '速度',
     10: '処理能力',

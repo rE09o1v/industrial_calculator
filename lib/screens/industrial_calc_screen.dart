@@ -25,7 +25,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     4: '計算上の減速比',
     5: '回転数',
     6: '回転数',
-    7: '回転数',
+    7: '速度',
     8: '処理能力',
     9: '速度',
     10: '処理能力',
@@ -89,7 +89,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
   // [7] 回転数からHz換算計算
   final _calc7RpmController = TextEditingController();
   
-  // [8] 円周と回転数から回転数(m/min)計算
+  // [8] 円周と回転数から速度(m/min)計算
   final _calc8CircumferenceController = TextEditingController();
   final _calc8RpmController = TextEditingController();
   
@@ -147,7 +147,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       {'targetIndex': 11, 'controller': '_calc12HzRpmController', 'label': '回転数 (1Hz/rpm)'},
       {'targetIndex': 13, 'controller': '_calc14HzRpmController', 'label': '回転数 (1Hz/rpm)'},
     ],
-    7: [], // [8] 円周と回転数から回転数(m/min)計算
+    7: [], // [8] 円周と回転数から速度(m/min)計算
     8: [ // [9] 能力本数から処理能力計算
       {'targetIndex': 10, 'controller': '_calc11ProcessingTimePerBottleController', 'label': '処理能力 (秒)'},
     ],
@@ -214,7 +214,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
     '[5] 各モータ定格回転数、T速度、円周から計算上の減速比計算',
     '[6] 各モータ定格回転数と減速比から回転数計算',
     '[7] 回転数からHz換算計算',
-    '[8] 円周と回転数から回転数(m/min)計算',
+    '[8] 円周と回転数から速度(m/min)計算',
     '[9] 能力本数から処理能力計算',
     '[10] ボトル間隔と能力本数から速度計算',
     '[11] 処理能力本数と処理能力から処理能力計算',
@@ -916,7 +916,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
           ],
         );
         
-      case 7: // [8] 円周と回転数から回転数(m/min)計算
+      case 7: // [8] 円周と回転数から速度(m/min)計算
         return Column(
           children: [
             TextFormField(
@@ -1133,7 +1133,7 @@ class _IndustrialCalcScreenState extends State<IndustrialCalcScreen> {
       case 6: // [7] 回転数からHz換算計算
         _calculateHzFromRpm();
         break;
-      case 7: // [8] 円周と回転数から回転数(m/min)計算
+      case 7: // [8] 円周と回転数から速度(m/min)計算
         _calculateRpmToMeterPerMin();
         break;
       case 8: // [9] 能力本数から処理能力計算
